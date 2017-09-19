@@ -5,7 +5,7 @@
 #include<process.h>
 #include <time.h>
 
-#define MAX_BUFFER_SIZE 5000
+#define MAX_BUFFER_SIZE 1024
 
 
 typedef  __int8 int8_t;

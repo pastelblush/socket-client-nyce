@@ -59,9 +59,6 @@ void test_cmd_nyce(void)
 	rushEthSetAddressDataBuffer(nodeID, 0, E_AXS_NAM0, sizeof(char), 20, AXS1_NAM_0);
 	rushEthSetAddressDataBuffer(nodeID, 0, E_AXS_TYPE, sizeof(int), 10, AXS_TYPE_1);
 
-	//Sleep(1000);
-
-
 	rushNyceInit(nodeID);
 
 	puts("test started");
@@ -71,7 +68,6 @@ void test_cmd_nyce(void)
 	start_s = clock();
 	while (1)
 	{
-		Sleep(2);
 		rushEthGetAddressDataBuffer(nodeID, 1, E_STAT_FLG, sizeof(int), 10, F_STAT_FLG_1);
 		if ((F_STAT_FLG_1[0] & 0x01) || (F_STAT_FLG_1[0] & 0x01))
 		{

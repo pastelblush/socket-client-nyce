@@ -411,7 +411,7 @@ int rushEthInit(unsigned int nodeID)
 	}
 	//printf("InitialReceive Buffer Size: %d\n", recvBuffSize);
 
-	recvBuffSize = MAX_BUFFER_SIZE;
+	recvBuffSize = MAX_BUFFER_SIZE * 20;
 	/* Set the buffer size to new value */
 	if (setsockopt(TempNodeData->s, SOL_SOCKET, SO_RCVBUF, &recvBuffSize, sizeof(recvBuffSize)) < 0)
 	{
