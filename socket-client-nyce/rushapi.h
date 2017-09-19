@@ -65,6 +65,8 @@ enum{
 	E_NYCE_INIT,
 	E_NYCE_STOP,
 
+	E_REQ_STAT,
+
 	E_PING = 4114,
 
 };
@@ -124,7 +126,7 @@ int rushMemQue(unsigned int nodeID, void* arg, int size);
 int rushMemDeque(unsigned int nodeID, void* arg);
 int rushSeqSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t cmd, int typeLen, int nrOfItem, void *arg);
 int rushSeqGetAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
-void rushHandleStatusBuffer(unsigned int nodeID, void *statBuff);
+int rushHandleStatusBuffer(unsigned int nodeID, void *statBuff);
 int rushNyceAbort(unsigned int nodeID);
 int rushNyceDisconnect(unsigned int nodeID);
 void *RUSH_NYCE1_ETH(void);

@@ -56,8 +56,8 @@ void test_cmd_nyce(void)
 	strcpy(AXS1_NAM_0, "IDAM");
 	AXS_TYPE_1[0] = 1;
 
-	rushSeqSetAddressDataBuffer(nodeID, 0, E_AXS_NAM0, sizeof(char), 20, AXS1_NAM_0);
-	rushSeqSetAddressDataBuffer(nodeID, 0, E_AXS_TYPE, sizeof(int), 10, AXS_TYPE_1);
+	rushEthSetAddressDataBuffer(nodeID, 0, E_AXS_NAM0, sizeof(char), 20, AXS1_NAM_0);
+	rushEthSetAddressDataBuffer(nodeID, 0, E_AXS_TYPE, sizeof(int), 10, AXS_TYPE_1);
 
 	//Sleep(1000);
 
@@ -71,7 +71,8 @@ void test_cmd_nyce(void)
 	start_s = clock();
 	while (1)
 	{
-		rushSeqGetAddressDataBuffer(nodeID, 1, E_STAT_FLG, sizeof(int), 10, F_STAT_FLG_1);
+		Sleep(2);
+		rushEthGetAddressDataBuffer(nodeID, 1, E_STAT_FLG, sizeof(int), 10, F_STAT_FLG_1);
 		if ((F_STAT_FLG_1[0] & 0x01) || (F_STAT_FLG_1[0] & 0x01))
 		{
 			//rushSeqGetAddressDataBuffer(nodeID, 1, E_NET_CURRENT, sizeof(float),10, F_DRIVE_CURRENT_1);
@@ -86,7 +87,7 @@ void test_cmd_nyce(void)
 
 				if ((LAST_CTR_FLG[20] != CTR_FLG[20]) || (LAST_CTR_FLG[30] != CTR_FLG[30]))
 				{
-					rushSeqSetAddressDataBuffer(nodeID, 0, E_CTR_FLG, sizeof(float), 80, CTR_FLG);
+					rushEthSetAddressDataBuffer(nodeID, 0, E_CTR_FLG, sizeof(float), 80, CTR_FLG);
 					LAST_CTR_FLG[20] = CTR_FLG[20];
 					LAST_CTR_FLG[30] = CTR_FLG[30];
 				}
@@ -97,7 +98,7 @@ void test_cmd_nyce(void)
 				break;
 
 			case 1:
-				rushSeqGetAddressDataBuffer(nodeID, 1, E_VC_POS, sizeof(float), 20, F_VC_POS_1);
+				rushEthGetAddressDataBuffer(nodeID, 1, E_VC_POS, sizeof(float), 20, F_VC_POS_1);
 				if (abs(F_VC_POS_1[0] - CMD_FLG[0]) < 2)
 				{
 					step++;
@@ -111,7 +112,7 @@ void test_cmd_nyce(void)
 
 				if ((LAST_CTR_FLG[20] != CTR_FLG[20]) || (LAST_CTR_FLG[30] != CTR_FLG[30]))
 				{
-					rushSeqSetAddressDataBuffer(nodeID, 0, E_CTR_FLG, sizeof(float), 80, CTR_FLG);
+					rushEthSetAddressDataBuffer(nodeID, 0, E_CTR_FLG, sizeof(float), 80, CTR_FLG);
 					LAST_CTR_FLG[20] = CTR_FLG[20];
 					LAST_CTR_FLG[30] = CTR_FLG[30];
 				}
@@ -121,7 +122,7 @@ void test_cmd_nyce(void)
 				//puts("case 2");
 				break;
 			case 3:
-				rushSeqGetAddressDataBuffer(nodeID, 1, E_VC_POS, sizeof(float), 20, F_VC_POS_1);
+				rushEthGetAddressDataBuffer(nodeID, 1, E_VC_POS, sizeof(float), 20, F_VC_POS_1);
 				if (abs(F_VC_POS_1[0] - CMD_FLG[0]) < 2)
 				{
 					step = 0;
@@ -153,12 +154,12 @@ void turretHead(int * key)
 	if (*key > 0)
 	{
 		EXE_FLG[0] = CMD_FLG[0];
-		rushSeqSetAddressDataBuffer(nodeID, 0, E_CMD_FLG, sizeof(float), 10, CMD_FLG);
+		rushEthSetAddressDataBuffer(nodeID, 0, E_CMD_FLG, sizeof(float), 10, CMD_FLG);
 	}
 
 	while (1)
 	{
-		rushSeqGetAddressDataBuffer(nodeID, 0, E_CMD_FLG, sizeof(float), 10, EXE_FLG);
+		rushEthGetAddressDataBuffer(nodeID, 0, E_CMD_FLG, sizeof(float), 10, EXE_FLG);
 		if (EXE_FLG[0] == 0)
 		{
 			*key = 0;
@@ -188,8 +189,8 @@ void init_vc(void)
 	CTR_FLG[41] = 0.005;//VC soft landing default duration
 	F_FORCE_LIMIT_1[0] = 40000;
 
-	rushSeqSetAddressDataBuffer(nodeID, 0, E_FORCE_LIMIT, sizeof(float), 10, F_FORCE_LIMIT_1);
-	rushSeqSetAddressDataBuffer(nodeID, 0, E_CMD_FLG, sizeof(float), 10, CMD_FLG);
+	rushEthSetAddressDataBuffer(nodeID, 0, E_FORCE_LIMIT, sizeof(float), 10, F_FORCE_LIMIT_1);
+	rushEthSetAddressDataBuffer(nodeID, 0, E_CMD_FLG, sizeof(float), 10, CMD_FLG);
 
 	
 

@@ -44,7 +44,7 @@ int main(int argc , char *argv[])
 	printf("int: %d,float: %d,char %d \n",sizeof(int),sizeof(float),sizeof(char));
 	NyceInit(NYCE_ETH);
 
-	_beginthread(RUSH_NYCE1_ETH, 1024, NULL);
+//	_beginthread(RUSH_NYCE1_ETH, 1024, NULL);
 //	_beginthread(RUSH_NYCE2_ETH, 1024, NULL);
 //	_beginthread(RUSH_NYCE3_ETH, 1024, NULL);
 	printf("node eth started");
@@ -63,10 +63,10 @@ int main(int argc , char *argv[])
 
 	//_beginthread(rushNyceEthStart, 0, nodeID);
 	Sleep(1000);
-	if ((ThreadCtrl & Nyce_Eth1))
-	{
+//	if ((ThreadCtrl & Nyce_Eth1))
+//	{
 		test_cmd_nyce();
-	}
+//}
 	
 	//CloseHandle(ghMutex);
 	rushCloseWinSock();
@@ -85,8 +85,18 @@ int rushNyceConnect(const char* pNodeName , uint32_t *pNodeID)
 	char error_msg[80];
 
 	
-	returnVal = NhiConnect(pNodeName, pNodeID);
-	returnVal = SysGetNodeAddress(*pNodeID, nodeAddress, sizeof(nodeAddress));
+	if (NhiConnect(pNodeName, pNodeID) < 0)
+	{
+		return -1;
+	}
+
+	if (SysGetNodeAddress(*pNodeID, nodeAddress, sizeof(nodeAddress)) < 0)
+	{
+		return -1;
+	}
+
+
+
 	NodeData = &gNodeDataArray[*pNodeID];
 	NodeData->nodeID = *pNodeID;
 	strcpy(&NodeData->ipAddress, nodeAddress);
@@ -102,12 +112,29 @@ int rushNyceConnect(const char* pNodeName , uint32_t *pNodeID)
 	{
 		sprintf(error_msg, "CreateMutex error: %d\n", WSAGetLastError());
 		DieWithError(error_msg);
-		returnVal = - 1;
+		return -1;
 	}
 
 	NodeData->nodeCreated = 255;
+
+	if (rushEthInit(*pNodeID) < 0)
+	{
+		sprintf(error_msg, "rushEthInit: %d\n", WSAGetLastError());
+		DieWithError(error_msg);
+		return -1;
+	}
+
+	if (rushNodeEthConnect(*pNodeID, 5) < 0)
+	{
+		sprintf(error_msg, "rushNodeEthConnect: %d\n", WSAGetLastError());
+		DieWithError(error_msg);
+		return -1;
+	}
+
+	puts("eth ready");
+	NodeData->ethReadyFlag = 255;
 	
-	return returnVal;
+	return 1;
 }
 
 int rushGetNodeDataStructure(unsigned int hNodeData, unsigned int nodeID)
@@ -118,9 +145,8 @@ int rushGetNodeDataStructure(unsigned int hNodeData, unsigned int nodeID)
 
 	pNodeData = hNodeData;
 	*pNodeData = &gNodeDataArray[nodeID];
-	retVal = 1;
 
-	return retVal;
+	return 1;
 }
 
 int rushGetMutex(unsigned int hMutex, unsigned int nodeID)
@@ -132,9 +158,8 @@ int rushGetMutex(unsigned int hMutex, unsigned int nodeID)
 	phMutex = hMutex;
 	NodeData = &gNodeDataArray[nodeID];
 	*phMutex = &(NodeData->hMutex);
-	retVal = 1;
 
-	return retVal;
+	return 1;
 }
 int rushGetMutexVal(HANDLE *hMutexVal, unsigned int nodeID)
 
@@ -144,9 +169,8 @@ int rushGetMutexVal(HANDLE *hMutexVal, unsigned int nodeID)
 
 	NodeData = &gNodeDataArray[nodeID];
 	*hMutexVal = NodeData->hMutex;
-	retVal = 1;
 
-	return retVal;
+	return 1;
 }
 
 
@@ -158,10 +182,8 @@ int rushGetIP(char *nodeIP, unsigned int nodeID)
 	NodeData = &gNodeDataArray[nodeID];
 	
 	strcpy(nodeIP, &(NodeData->ipAddress));
-	retVal = 1;
 	
-
-	return retVal;
+	return 1;
 }
 
 
@@ -197,6 +219,35 @@ void *rushNyceEthStart(uint32_t nodeID)
 	}
     return 0;
 }
+
+int rushNodeEthConnect(uint32_t nodeID, int retry)
+{
+	struct node_data* TempNodeData;
+	int retval,count;
+	char error_msg[80];
+
+	if (rushGetNodeDataStructure(&TempNodeData, nodeID) < 0)
+	{
+		return -1;
+	}
+	
+	for (count = 0; count < retry; count++)
+	{
+
+		if (connect(TempNodeData->s, (struct sockaddr *)&TempNodeData->server, sizeof(TempNodeData->server)) < 0)
+		{
+			sprintf(error_msg, "connect error. Error Code : %d", WSAGetLastError());
+			DieWithError(error_msg);
+
+		}
+		else
+		{
+			return 1;
+		}
+		return -1;
+	}
+}
+
 
 void *RUSH_NYCE1_ETH(void)
 {
@@ -324,10 +375,12 @@ int rushEthInit(unsigned int nodeID)
 	int true_val = 1;
 	struct timeval tv;
 	char error_msg[80];
-	int retVal;
 	struct node_data* TempNodeData;
 
-	retVal = rushGetNodeDataStructure(&TempNodeData, nodeID);
+	if (rushGetNodeDataStructure(&TempNodeData, nodeID) < 0)
+	{
+		return -1;
+	}
 
 	TempNodeData->server.sin_addr.s_addr = inet_addr(TempNodeData->ipAddress);
 	TempNodeData->server.sin_family = AF_INET;
@@ -623,28 +676,95 @@ int rushSeqSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t address
 
 }
 
+int rushEthSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t address, int typeLen, int nrOfItem, void *arg)
+{
+	float *fBufferPtr;
+
+	int32_t *bffr;
+	int32_t send_buffer[MAX_BUFFER_SIZE / 4];
+	int32_t rcv_bfr[MAX_BUFFER_SIZE];
+	int count,iResult;
+	char error_msg[80];
+	struct node_data* TempNodeData;
+	
+	
+	if (rushGetNodeDataStructure(&TempNodeData, nodeID) < 0)
+	{
+		return -1;
+	}
+
+
+
+
+	if ((address == E_CMD_FLG) || (address == E_CTR_FLG) || (address == E_FORCE_LIMIT))
+	{
+		fBufferPtr = (float *)arg;
+		for (count = 0; count < nrOfItem; count++)
+		{
+			send_buffer[count + 2] = (int32_t)((float)fBufferPtr[count] * 10000.00);
+		}
+	}
+	else
+	{
+		bffr = (int32_t *)arg;
+		memcpy(&send_buffer[2], bffr, typeLen * nrOfItem);
+	}
+
+
+
+	//populate buffer setting
+	send_buffer[0] = address;
+	send_buffer[1] = typeLen * nrOfItem;
+
+	//send buffer
+
+	iResult = send(TempNodeData->s, send_buffer, sizeof(send_buffer), 0);
+	if (iResult == SOCKET_ERROR) {
+		sprintf(error_msg, "send failed with error: %d", WSAGetLastError());
+		DieWithError(error_msg);
+		return -1;
+	}
+
+	iResult = recv(TempNodeData->s, rcv_bfr, sizeof(rcv_bfr), 0);
+	if (iResult < 0)
+	{
+		sprintf(error_msg, "recv failed with error: %d", WSAGetLastError());
+		DieWithError(error_msg);
+		return -1;
+	}
+
+	return 1;
+
+}
+
 int rushNyceInit(unsigned int nodeID)
 {
 	int emptyInt = 0;
-	int retval = -1;
+	int retval,count;
 	struct node_data* TempNodeData;
 
 	retval = rushGetNodeDataStructure(&TempNodeData, nodeID);
-	rushSeqSetAddressDataBuffer(nodeID, 1, E_NYCE_INIT, sizeof(int), 1, &emptyInt);
+	rushEthSetAddressDataBuffer(nodeID, 1, E_NYCE_INIT, sizeof(emptyInt), 1, &emptyInt);
 
-	while (TempNodeData->nodeReady == 0)
-	{
-		;//wait node to be ready
-	}
 	Sleep(300);
 
-	return 1;
+	for (count = 0; count < 5; count++)
+	{
+		rushEthGetAddressDataBuffer(nodeID, 1, E_NYCE_INIT, sizeof(emptyInt), 1, &emptyInt);
+
+		if (TempNodeData->nodeReady == 255)
+		{
+			return 1;
+		}
+	}
+	
+	return -1;
 }
 
 int rushNyceAbort(unsigned int nodeID)
 {
 	int emptyInt = 0;
-	rushSeqSetAddressDataBuffer(nodeID, 1, E_NYCE_STOP, sizeof(int), 1, &emptyInt);
+	rushEthSetAddressDataBuffer(nodeID, 1, E_NYCE_STOP, sizeof(int), 1, &emptyInt);
 }
 
 int rushNyceDisconnect(unsigned int nodeID)
@@ -660,7 +780,7 @@ int rushNyceDisconnect(unsigned int nodeID)
 }
 
 
-void rushHandleStatusBuffer(unsigned int nodeID,void *statBuff)
+int rushHandleStatusBuffer(unsigned int nodeID,void *statBuff)
 {
 	int32_t *statusBuffer;
 	int count;
@@ -705,7 +825,8 @@ void rushHandleStatusBuffer(unsigned int nodeID,void *statBuff)
 		{
 			TempNodeData->nodeReady = 0;
 		}
-	return 0;
+
+	return 1;
 
 }
 
@@ -789,3 +910,70 @@ int rushSeqGetAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t addres
 
 
 
+int rushEthGetAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData)
+{
+	struct sd* sd_temp, *last_sd;
+	int32_t *bffr;
+	int32_t dwWaitResult;
+	int requestSig;
+	int32_t send_buffer[MAX_BUFFER_SIZE / 4];
+	int32_t rcv_bfr[MAX_BUFFER_SIZE];
+	int count, iResult;
+	char error_msg[80];
+
+	struct node_data* TempNodeData;
+	if (rushGetNodeDataStructure(&TempNodeData, nodeID) < 1)
+	{
+		return -1;
+	}
+
+	//bffr = (int32_t *)arg;
+
+	//populate buffer setting
+	send_buffer[0] = E_REQ_STAT;
+	send_buffer[1] = address;
+
+	//send buffer
+
+	iResult = send(TempNodeData->s, send_buffer, sizeof(send_buffer), 0);
+	if (iResult == SOCKET_ERROR) {
+		sprintf(error_msg, "send failed with error: %d", WSAGetLastError());
+		DieWithError(error_msg);
+		return -1;
+	}
+
+
+	iResult = recv(TempNodeData->s, rcv_bfr, sizeof(rcv_bfr), 0);
+	if (iResult < 0)
+	{
+		sprintf(error_msg, "recv failed with error: %d", WSAGetLastError());
+		DieWithError(error_msg);
+		return -1;
+	}
+	
+	if (rushHandleStatusBuffer(nodeID, rcv_bfr) < 0)
+	{
+		return -1;
+	}
+
+
+	if (address == E_NET_CURRENT)
+	{
+		memcpy(pData, &TempNodeData->status.NET_CURRENT[0], typeLen * nrOfItem);
+	}
+	else if (address == E_STAT_FLG)
+	{
+		memcpy(pData, &TempNodeData->status.STAT_FLG[0], typeLen * nrOfItem);
+	}
+	else if (address == E_VC_POS)
+	{
+		memcpy(pData, &TempNodeData->status.VC_POS[0], typeLen * nrOfItem);
+	}
+	else if (address == E_CMD_FLG)
+	{
+		memcpy(pData, &TempNodeData->status.CMD_FLG[0], typeLen * nrOfItem);
+	}
+
+	return 1;
+
+}
