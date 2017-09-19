@@ -45,15 +45,15 @@ int main(int argc , char *argv[])
 	NyceInit(NYCE_ETH);
 
 	_beginthread(RUSH_NYCE1_ETH, 1024, NULL);
-	_beginthread(RUSH_NYCE2_ETH, 1024, NULL);
-	_beginthread(RUSH_NYCE3_ETH, 1024, NULL);
+//	_beginthread(RUSH_NYCE2_ETH, 1024, NULL);
+//	_beginthread(RUSH_NYCE3_ETH, 1024, NULL);
 	printf("node eth started");
 
 	printf("node data array address : %d \n", gNodeDataArray);
 
-	rushNyceConnect(&nodeID, "Node02");
+	rushNyceConnect("Node02",&nodeID);
 	printf("\n%s\n", gNodeDataArray[0].ipAddress);
-
+	Sleep(1000);
 	//rushNyceAbort(nodeID);
 	//rushNyceDisconnect(nodeID);
 
@@ -63,7 +63,7 @@ int main(int argc , char *argv[])
 
 	//_beginthread(rushNyceEthStart, 0, nodeID);
 	Sleep(1000);
-	if ((ThreadCtrl & Nyce_Eth1) && (ThreadCtrl & Nyce_Eth2) && (ThreadCtrl & Nyce_Eth3))
+	if ((ThreadCtrl & Nyce_Eth1))
 	{
 		test_cmd_nyce();
 	}
@@ -74,42 +74,38 @@ int main(int argc , char *argv[])
 
 
 
-int rushNyceConnect(uint32_t *pNodeID,const char* pNodeName)
+int rushNyceConnect(const char* pNodeName , uint32_t *pNodeID)
 {
 
 	int x;
 	int nodeExist;
-	unsigned int nodeNumber = 0;
 	int returnVal = -1;
 	char nodeAddress[20];
 	struct node_data *NodeData;
 	char error_msg[80];
 
-	returnVal = SysGetNodeNumber(pNodeName, &nodeNumber);
-	if (!(returnVal < 0))
+	
+	returnVal = NhiConnect(pNodeName, pNodeID);
+	returnVal = SysGetNodeAddress(*pNodeID, nodeAddress, sizeof(nodeAddress));
+	NodeData = &gNodeDataArray[*pNodeID];
+	NodeData->nodeID = *pNodeID;
+	strcpy(&NodeData->ipAddress, nodeAddress);
+
+
+	//CloseHandle(NodeData->hMutex);
+	NodeData->hMutex = CreateMutex(
+		NULL,              // default security attributes
+		FALSE,             // initially not owned
+		NULL);             // unnamed mutex
+
+	if (NodeData->hMutex == NULL)
 	{
-		returnVal = NhiConnect(pNodeName, pNodeID);
-		returnVal = SysGetNodeAddress(nodeNumber, nodeAddress, sizeof(nodeAddress));
-		NodeData = &gNodeDataArray[nodeNumber];
-		NodeData->nodeID = *pNodeID;
-		strcpy(&NodeData->ipAddress, nodeAddress);
-
-
-		//CloseHandle(NodeData->hMutex);
-		NodeData->hMutex = CreateMutex(
-			NULL,              // default security attributes
-			FALSE,             // initially not owned
-			NULL);             // unnamed mutex
-
-		if (NodeData->hMutex == NULL)
-		{
-			sprintf(error_msg, "CreateMutex error: %d\n", WSAGetLastError());
-			DieWithError(error_msg);
-			returnVal = - 1;
-		}
-
-		NodeData->nodeCreated = 255;
+		sprintf(error_msg, "CreateMutex error: %d\n", WSAGetLastError());
+		DieWithError(error_msg);
+		returnVal = - 1;
 	}
+
+	NodeData->nodeCreated = 255;
 	
 	return returnVal;
 }
@@ -121,79 +117,49 @@ int rushGetNodeDataStructure(unsigned int hNodeData, unsigned int nodeID)
 	unsigned int* pNodeData;
 
 	pNodeData = hNodeData;
-	retVal = -1;
-	for (count = 0; count < MAX_NODE_COUNT; count++)
-	{
-		NodeData = &gNodeDataArray[count];
-		if (NodeData->nodeID == nodeID)
-		{
-			*pNodeData = NodeData;
-			retVal = 1;
-			break;
-		}
-	}
+	*pNodeData = &gNodeDataArray[nodeID];
+	retVal = 1;
 
 	return retVal;
 }
 
 int rushGetMutex(unsigned int hMutex, unsigned int nodeID)
 {
-	int count,retVal;
+	int retVal;
 	struct node_data *NodeData;
 	unsigned int* phMutex;
 
 	phMutex = hMutex;
-	retVal = -1;
-	for (count = 0; count < MAX_NODE_COUNT; count++)
-	{	
-		NodeData = &gNodeDataArray[count];
-		if (NodeData->nodeID == nodeID)
-		{
-			*phMutex = &(NodeData->hMutex);
-			retVal = 1;
-			break;
-		}
-	}
+	NodeData = &gNodeDataArray[nodeID];
+	*phMutex = &(NodeData->hMutex);
+	retVal = 1;
 
 	return retVal;
 }
 int rushGetMutexVal(HANDLE *hMutexVal, unsigned int nodeID)
 
 {
-	int count, retVal;
+	int retVal;
 	struct node_data *NodeData;
 
-	retVal = -1;
-	for (count = 0; count < MAX_NODE_COUNT; count++)
-	{
-		NodeData = &gNodeDataArray[count];
-		if (NodeData->nodeID == nodeID)
-		{
-			*hMutexVal = NodeData->hMutex;
-			retVal = 1;
-			break;
-		}
-	}
+	NodeData = &gNodeDataArray[nodeID];
+	*hMutexVal = NodeData->hMutex;
+	retVal = 1;
+
 	return retVal;
 }
 
 
 int rushGetIP(char *nodeIP, unsigned int nodeID)
 {
-	int count, retVal;
+	int retVal;
 	struct node_data *NodeData;
 
-	retVal = -1;
-	for (count = 0; count < MAX_NODE_COUNT; count++)
-	{
-		NodeData = &gNodeDataArray[count];
-		if (NodeData->nodeID == nodeID)
-		{
-			strcpy(nodeIP, &(NodeData->ipAddress));
-			retVal = 1;
-			break;
-		}
-	}
+	NodeData = &gNodeDataArray[nodeID];
+	
+	strcpy(nodeIP, &(NodeData->ipAddress));
+	retVal = 1;
+	
 
 	return retVal;
 }

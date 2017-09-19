@@ -108,7 +108,7 @@ struct node_data gNodeDataArray[MAX_NODE_COUNT];
 
 char gErrorMsg[80];
 
-int rushNyceConnect(uint32_t *pNodeID, const char* pNodeName);
+int rushNyceConnect(const char* pNodeName, uint32_t *pNodeID);
 int rushGetNodeDataStructure(unsigned int hNodeData, unsigned int nodeID);
 int rushGetMutex(unsigned int hMutex, unsigned int nodeID);
 int rushGetMutexVal(HANDLE *hMutexVal, unsigned int nodeID);
