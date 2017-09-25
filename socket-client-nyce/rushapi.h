@@ -133,6 +133,8 @@ void *RUSH_NYCE1_ETH(void);
 void *RUSH_NYCE2_ETH(void);
 void *RUSH_NYCE3_ETH(void);
 void RUSH_NYCE_ETH_START(unsigned int nodeNum, unsigned long *pThreadCtrl, unsigned long ThreadFlag);//, int *SEQ_ETHSTART1);
-
+int rushEthGetAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
+int rushEthSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t address, int typeLen, int nrOfItem, void *arg);
+int rushEthGetNextAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
 
 void DieWithError(char* errorMessage);
