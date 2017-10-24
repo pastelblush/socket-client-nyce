@@ -1,5 +1,4 @@
 #include<stdio.h>
-#include<winsock2.h>
 #include<windows.h>
 #include<conio.h>
 #include<process.h>
@@ -65,9 +64,7 @@ enum{
 	E_NYCE_INIT,
 	E_NYCE_STOP,
 
-	E_REQ_STAT,
-
-	E_PING = 4114,
+	E_PING,
 
 };
 
@@ -89,14 +86,14 @@ struct status_array{
 
 struct node_data{
 	int nodeCreated;
-	int nodeReady;
+	int sys_case;
 	uint32_t nodeID;
-	HANDLE hMutex;
+	HANDLE hMutex[10];
 	char ipAddress[80];
-	struct sockaddr_in server;
-	SOCKET s;
+	struct sockaddr_in server[10];
+	SOCKET s[10];
 	struct sd_pool nodeSdPool;
-	struct status_array status;
+	struct status_array status[10];
 	int ethReadyFlag;
 	int ethCloseFlag;
 };
@@ -138,3 +135,39 @@ int rushEthSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t address
 int rushEthGetNextAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
 
 void DieWithError(char* errorMessage);
+
+typedef struct resp_buff
+{
+	int					status;
+	int					sys_case;
+	float 				VC_POS[20];
+	float 				FORCE_LIMIT[10];
+	float 				NET_CURRENT[10];
+	float				CMD_FLG[10];
+	unsigned int		Shared_StatFlag[10];
+}RESP_BUFF;
+
+
+enum{
+	SYS_IDLE,
+	SYS_INIT,
+	SYS_READY,
+	SYS_STOP,
+};
+
+typedef struct cmd_buff
+{
+	int					cmd;
+	int					size;
+	float				fbuff[80];
+	char				cbuff[20];
+	int					ibuff[20];
+}CMD_BUFF;
+
+enum{
+	int_1,
+	int_10,
+	char_10,
+	float_10,
+	float_80,
+};
