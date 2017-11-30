@@ -4,7 +4,9 @@
 #include<process.h>
 #include <time.h>
 
-#define MAX_BUFFER_SIZE 1024
+
+#include "dyad.h"
+#include <time.h>
 
 
 typedef  __int8 int8_t;
@@ -15,31 +17,18 @@ typedef  unsigned __int8 uint8_t;
 typedef  unsigned __int16 uint16_t;
 typedef  unsigned __int32 uint32_t;
 
+#define MAX_PORT 1
 
-#define MAX_SD_COUNT 320
+static void rushOnConnect(dyad_Event *e);
+static void rushOnError(dyad_Event *e);
+static void onReady_0(dyad_Event *e);
+static void onReady_1(dyad_Event *e);
+static void onReady_2(dyad_Event *e);
+static void onData_0(dyad_Event *e);
+static void onData_1(dyad_Event *e);
+static void onData_2(dyad_Event *e);
 
-
-
-struct sd_pool{
-	//int32_t max_sd;
-	int32_t count;
-	int32_t entry_sd;
-	int32_t curr_sd;
-};
-
-struct cd{
-	int32_t cmd;
-	int32_t size;
-	char buffer[MAX_BUFFER_SIZE - 8];
-};
-
-
-enum{
-	NO_NODE,
-	NODE_1
-};
-
-enum{
+enum E_CMD{
 	E_NO_CMD,
 	E_CMD_FLG,
 	E_CTR_FLG,
@@ -64,110 +53,99 @@ enum{
 	E_NYCE_INIT,
 	E_NYCE_STOP,
 
-	E_PING,
+	E_REQ_STAT,
+	E_SYS_CASE,
+
+	E_PING = 4114,
 
 };
 
-struct sd{
-	int32_t next_sd;
-	int32_t prev_sd;
-	int32_t size;
-	int32_t requestSig;
-	int32_t buffer[MAX_BUFFER_SIZE / 4];
-};
 
-struct status_array{
-	int key;
+struct memorymap{
+	char key[32];
+	float CMD_FLG[10];
+	float CTR_FLG[80];
+	char  AXS_NAM0[20];
+	char  AXS_NAM1[20];
+	char  AXS_NAM2[20];
+	char  AXS_NAM3[20];
+	char  AXS_NAM4[20];
+	char  AXS_NAM5[20];
+	char  AXS_NAM6[20];
+	char  AXS_NAM7[20];
+	char  AXS_NAM8[20];
+	char  AXS_NAM9[20];
+	int   AXS_TYPE[10];
+	float FORCE_LIMIT[10];
+	float VC_POS[20];
 	float NET_CURRENT[10];
 	unsigned int STAT_FLG[10];
-	float VC_POS[20];
-	float CMD_FLG[10];
-};
+	char	  sys_case;
+	char	  command;
+}MEMORYMAP;
 
 struct node_data{
-	int nodeCreated;
-	int sys_case;
-	uint32_t nodeID;
-	HANDLE hMutex[10];
-	char ipAddress[80];
-	struct sockaddr_in server[10];
-	SOCKET s[10];
-	struct sd_pool nodeSdPool;
-	struct status_array status[10];
-	int ethReadyFlag;
-	int ethCloseFlag;
+	unsigned int nodeID;
+	HANDLE hMutex[MAX_PORT];
+	char   ipAddress[30];
+	int   ethReadyFlag;
+	int   ethCloseFlag;
+	int   nodeCreated;
+	int	  sys_case;
+	struct memorymap memmap;
+	dyad_Stream *ds;
+	char sendBuffer[1024];
 };
 
-#define MAX_NODE_COUNT 32
-WSADATA wsa;
 
+#define MAX_NODE_COUNT 3
+#define MAX_ERROR_COUNT 80
 struct node_data gNodeDataArray[MAX_NODE_COUNT];
-//int32_t nyceStatusBuffer[MAX_BUFFER_SIZE / 4];
+char gErrorMsg[MAX_ERROR_COUNT];
 
-
-char gErrorMsg[80];
-
+void rushSendParser(int nodeId, dyad_Event *e);
 int rushNyceConnect(const char* pNodeName, uint32_t *pNodeID);
 int rushGetNodeDataStructure(unsigned int hNodeData, unsigned int nodeID);
-int rushGetMutex(unsigned int hMutex, unsigned int nodeID);
-int rushGetMutexVal(HANDLE *hMutexVal, unsigned int nodeID);
-int rushGetIP(char *nodeIP, unsigned int nodeID);
-void *rushNyceEthStart(uint32_t nodeID);
 int rushInitWinSock(void);
 int rushCloseWinSock(void);
-int rushEthInit(unsigned int nodeID);
-int rushDataExchange(unsigned int nodeID);
 int rushEthClose(unsigned int nodeID);
 void DieWithError(char* errorMessage);
-int rushMemQue(unsigned int nodeID, void* arg, int size);
-int rushMemDeque(unsigned int nodeID, void* arg);
-int rushSeqSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t cmd, int typeLen, int nrOfItem, void *arg);
-int rushSeqGetAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
-int rushHandleStatusBuffer(unsigned int nodeID, void *statBuff);
 int rushNyceAbort(unsigned int nodeID);
 int rushNyceDisconnect(unsigned int nodeID);
-void *RUSH_NYCE1_ETH(void);
-void *RUSH_NYCE2_ETH(void);
-void *RUSH_NYCE3_ETH(void);
-void RUSH_NYCE_ETH_START(unsigned int nodeNum, unsigned long *pThreadCtrl, unsigned long ThreadFlag);//, int *SEQ_ETHSTART1);
-int rushEthGetAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
-int rushEthSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t address, int typeLen, int nrOfItem, void *arg);
-int rushEthGetNextAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
+int rushGetAddressDataBuffer(unsigned int nodeID, int areaNr, uint32_t address, int typeLen, int nrOfItem, unsigned int pData);
+int rushSetAddressDataBuffer(unsigned int nodeID, int areaNr, int32_t address, int typeLen, int nrOfItem, void *arg);
 
-void DieWithError(char* errorMessage);
-
-typedef struct resp_buff
-{
-	int					status;
-	int					sys_case;
-	float 				VC_POS[20];
-	float 				FORCE_LIMIT[10];
-	float 				NET_CURRENT[10];
-	float				CMD_FLG[10];
-	unsigned int		Shared_StatFlag[10];
-}RESP_BUFF;
+void rushUpdateBuffer(unsigned int nodeID);
+void rushMakeBuffer(char* bufferout, char* bufferin, int* pointer, int size, int flag);
+int rushSearchBuffer(unsigned long int* start, int* buffersize, int* size, int *flag);
+void rushDyadUpdate(void);
 
 
-enum{
+enum SEQ_SYS{
 	SYS_IDLE,
 	SYS_INIT,
 	SYS_READY,
 	SYS_STOP,
 };
 
-typedef struct cmd_buff
-{
-	int					cmd;
-	int					size;
-	float				fbuff[80];
-	char				cbuff[20];
-	int					ibuff[20];
-}CMD_BUFF;
+typedef struct memorymapbuffer{
+	char key[32];
+	float CMD_FLG[10];
+	float CTR_FLG[80];
+	char  AXS_NAM0[20];
+	char  AXS_NAM1[20];
+	char  AXS_NAM2[20];
+	char  AXS_NAM3[20];
+	char  AXS_NAM4[20];
+	char  AXS_NAM5[20];
+	char  AXS_NAM6[20];
+	char  AXS_NAM7[20];
+	char  AXS_NAM8[20];
+	char  AXS_NAM9[20];
+	int   AXS_TYPE[10];
+	float FORCE_LIMIT[10];
+	int command;
+}MEMORYMAPBUFFER;
 
-enum{
-	int_1,
-	int_10,
-	char_10,
-	float_10,
-	float_80,
-};
+clock_t startclk;
+clock_t endclk;

@@ -81,10 +81,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dyad.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="rushapi.c" />
     <ClCompile Include="test.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dyad.h" />
     <ClInclude Include="nycetest.h" />
     <ClInclude Include="rushapi.h" />
   </ItemGroup>

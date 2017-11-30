@@ -21,12 +21,21 @@
     <ClCompile Include="test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rushapi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dyad.c">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rushapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="nycetest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dyad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
